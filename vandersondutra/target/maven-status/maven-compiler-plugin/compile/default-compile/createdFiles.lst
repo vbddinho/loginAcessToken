@@ -1,0 +1,11 @@
+com\futebol\vandersondutra\config\CorsConfig.class
+com\futebol\vandersondutra\controller\AuthController.class
+com\futebol\vandersondutra\controller\PingController.class
+com\futebol\vandersondutra\controller\AuthController$LoginRequest.class
+com\futebol\vandersondutra\config\SecurityConfig.class
+com\futebol\vandersondutra\repository\UserRepository.class
+com\futebol\vandersondutra\init\DataSeeder.class
+com\futebol\vandersondutra\model\UserAccount.class
+com\futebol\vandersondutra\VandersondutraApplication.class
+com\futebol\vandersondutra\security\JwtAuthenticationFilter.class
+com\futebol\vandersondutra\security\JwtUtil.class
