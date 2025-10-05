@@ -6,6 +6,7 @@ import com.futebol.vandersondutra.security.JwtAuthenticationFilter;
 import com.futebol.vandersondutra.security.JwtUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -17,6 +18,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableMethodSecurity
@@ -58,6 +62,10 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
 		http
+			// Habilita CORS no filtro de segurança. Mantemos separado e comentado
+			// para deixar explícito que o Spring Security usará a configuração do bean
+			// `CorsConfigurationSource` abaixo.
+			.cors(Customizer.withDefaults())
 			.csrf(csrf -> csrf.disable())
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.headers(headers -> headers.frameOptions(frame -> frame.disable())) // permitir H2 console
@@ -74,6 +82,25 @@ public class SecurityConfig {
  
 		http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
+	}
+
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration cfg = new CorsConfiguration();
+		cfg.setAllowedOriginPatterns(java.util.List.of("*", "null"));
+		 // Liste explicitamente seus fronts em produção
+		//  cfg.setAllowedOrigins(java.util.List.of(
+		// 	"https://app.seudominio.com",
+		// 	"https://admin.seudominio.com"
+		// ));
+		cfg.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+		cfg.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
+		cfg.setExposedHeaders(java.util.List.of("Authorization"));
+		cfg.setAllowCredentials(false);
+		//cfg.setMaxAge(3600L); // define, em segundos, por quanto tempo o navegador pode “cachear” o resultado da requisição preflight (OPTIONS). Aqui, 3600s = 1 hora. Enquanto o cache valer, o navegador não enviará novos preflights para as mesmas combinações de origem/método/headers, reduzindo latência e tráfego.
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/api/**", cfg);
+		return source;
 	}
 }
 
