@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Login</title>
+    <style>
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 24px; }
+        .card { max-width: 360px; margin: 40px auto; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+        label { display:block; margin-top: 12px; font-weight: 600; }
+        input { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; }
+        button { width: 100%; margin-top: 16px; padding: 12px; background:#1f6feb; color:white; border:0; border-radius: 6px; cursor:pointer; }
+        .msg { margin-top: 12px; color: #c00; min-height: 20px; }
+        .ok { color: #0a0; }
+        code { background: #f6f8fa; padding: 2px 6px; border-radius: 4px; }
+    </style>
+    <script>
+        const API_BASE = (location.protocol === 'file:') ? 'http://localhost:8080' : '';
+        // Redireciona automaticamente se já houver token salvo e válido
+        // Comentário: isto verifica a existência do token; a validação completa ocorrerá ao chamar um endpoint protegido.
+        (function redirectIfHasToken() {
+            const existing = localStorage.getItem('access_token');
+            if (existing) {
+                // Opcional: tentativa de validação rápida chamando /api/auth/me; se ok, vai para client
+                fetch(API_BASE + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + existing } })
+                    .then(r => { if (r.ok) { window.location.href = 'client.html'; } })
+                    .catch(() => {});
+            }
+        })();
+        async function login(ev) {
+            ev.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('msg');
+            msg.textContent = '';
+            try {
+                const res = await fetch(API_BASE + '/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'Falha no login');
+                }
+                const data = await res.json();
+                localStorage.setItem('access_token', data.token);
+                msg.className = 'msg ok';
+                msg.textContent = 'Autenticado. Token salvo.';
+
+                // exemplo de chamada segura ao backend usando o token
+                const pingRes = await fetch(API_BASE + '/api/ping', {
+                    headers: { 'Authorization': 'Bearer ' + data.token }
+                });
+                const pingTxt = await pingRes.text();
+                document.getElementById('ping').textContent = pingTxt;
+                // Comentário: após autenticar com sucesso, redirecionamos para client.html
+                setTimeout(() => { window.location.href = 'client.html'; }, 600);
+            } catch (e) {
+                msg.className = 'msg';
+                msg.textContent = e.message;
+            }
+        }
+    </script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:8080; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';"/>
+</head>
+<body>
+<div class="card">
+    <h2>Entrar</h2>
+    <form onsubmit="login(event)">
+        <label for="email">Email</label>
+        <input id="email" type="email" required placeholder="admin@local"/>
+
+        <label for="password">Senha</label>
+        <input id="password" type="password" required placeholder="admin123"/>
+
+        <button type="submit">Login</button>
+    </form>
+    <div id="msg" class="msg"></div>
+    <div>
+        Resposta segura de <code>/api/ping</code>: <span id="ping"></span>
+    </div>
+</div>
+</body>
+</html>
+
+

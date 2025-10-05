@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cliente Externo - Teste API</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px; }
+    button { padding: 10px 16px; font-size: 16px; cursor: pointer; }
+    #resultado { margin-top: 16px; font-weight: 600; }
+  </style>
+  <script>
+    const API_BASE = (location.protocol === 'file:') ? 'http://localhost:8080' : '';
+    // Comentário: se já tiver token salvo, seguimos; se não, redirecionamos para login
+    (function ensureTokenOrRedirect() {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = 'login.html';
+      }
+    })();
+
+    // Verifica se o usuário é ADMIN para exibir o botão de criação de usuário
+    (function checkAdminAndToggleButton() {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      fetch(API_BASE + '/api/admin/ping', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(r => {
+          if (r.ok) {
+            const btn = document.getElementById('btnCreateUser');
+            if (btn) btn.style.display = 'inline-block';
+          }
+        })
+        .catch(() => {});
+    })();
+
+    async function chamarPublica() {
+      const url = API_BASE + '/api/public/hello';
+      const resultadoEl = document.getElementById('resultado');
+      resultadoEl.textContent = 'Chamando API pública...';
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const texto = await resp.text();
+        resultadoEl.textContent = 'Pública: ' + texto;
+      } catch (err) {
+        resultadoEl.textContent = 'Erro (pública): ' + err.message;
+      }
+    }
+
+    async function chamarProtegida() {
+      const url = API_BASE + '/api/protected/hello';
+      const resultadoEl = document.getElementById('resultado');
+      resultadoEl.textContent = 'Chamando API protegida...';
+      try {
+        const token = localStorage.getItem('access_token');
+        const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (resp.status === 401 || resp.status === 403) {
+          // Comentário: token inválido/expirado → limpar e ir para login
+          localStorage.removeItem('access_token');
+          window.location.href = 'login.html';
+          return;
+        }
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const texto = await resp.text();
+        resultadoEl.textContent = 'Protegida: ' + texto;
+      } catch (err) {
+        resultadoEl.textContent = 'Erro (protegida): ' + err.message;
+      }
+    }
+
+    function sair() {
+      // Comentário: logout local limpa o token e volta para login
+      localStorage.removeItem('access_token');
+      window.location.href = 'login.html';
+    }
+
+    function irParaCriarUsuario() {
+      window.location.href = 'create_user.html';
+    }
+  </script>
+  <!-- Observação: ao abrir este arquivo diretamente (file://), o navegador envia Origin: null. -->
+</head>
+<body>
+  <h1>Client</h1>
+  <p>Teste de chamadas públicas e protegidas.</p>
+  <div style="display:flex; gap:8px; margin-bottom:10px;">
+    <button onclick="chamarPublica()">Chamar API Pública</button>
+    <button onclick="chamarProtegida()">Chamar API Protegida</button>
+    <button onclick="sair()">Sair</button>
+    <button id="btnCreateUser" style="display:none" onclick="irParaCriarUsuario()">Criar Usuário (Admin)</button>
+  </div>
+  <div id="resultado"></div>
+</body>
+  
+</html>
+
+
